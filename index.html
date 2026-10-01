@@ -11,7 +11,7 @@
 <p class="intro">Match each category with its purpose. Select one card from each column. All eight pairs come from the category set in your worksheet.</p>
 <div id="lab-match">
   <h2>Clinical lab match</h2>
-  <div class="viz-row"><span id="lm-score" class="tabular-nums"></span><button class="btn" id="lm-reset" type="button">Restart</button></div>
+  <div class="viz-row"><div class="lm-counters"><span id="lm-score" class="tabular-nums"></span><span id="lm-attempts" class="tabular-nums" aria-live="polite"></span></div><button class="btn" id="lm-reset" type="button">Restart</button></div>
   <p id="lm-status" aria-live="polite">Select a category and its matching purpose.</p>
   <div class="lm-columns"><section><h3>Categories</h3><div id="lm-terms" class="lm-stack"></div></section><section><h3>Purposes</h3><div id="lm-defs" class="lm-stack"></div></section></div>
 </div>
@@ -19,6 +19,10 @@
 #lab-match .lm-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
 #lab-match .lm-stack{display:grid;gap:8px}
 #lab-match section{min-width:0}
+.lm-counters{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px}
+#lm-attempts{font-size:32px;font-weight:700;color:#17213b}
+#lab-match .btn.lm-wrong{background:#b91c1c;color:#fff;border-color:#991b1b}
+#lm-status.lm-error{color:#b91c1c}
 @media(max-width:420px){#lab-match .lm-columns{gap:8px}}
 </style>
 <script>
@@ -34,12 +38,13 @@ const pairs=[
 ['Cardiac and thromboembolic evaluation','Tests useful for cardiac studies or evaluating the need for a V/Q study.'],
 ['F-18 FDG PET preparation','Labs that help ensure good-quality FDG PET studies.']
 ];
-const terms=root.querySelector('#lm-terms'),defs=root.querySelector('#lm-defs'),status=root.querySelector('#lm-status'),score=root.querySelector('#lm-score');
-let selected=[null,null],matched=0,attempts=0;
+const terms=root.querySelector('#lm-terms'),defs=root.querySelector('#lm-defs'),status=root.querySelector('#lm-status'),score=root.querySelector('#lm-score'),attemptDisplay=root.querySelector('#lm-attempts');
+let selected=[null,null],matched=0,attempts=0,locked=false,wrongTimer=null;
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function update(){score.textContent=`${matched} / 8 matched · ${attempts} attempts`;}
+function update(){score.textContent=`${matched} / ${pairs.length} matched`;attemptDisplay.textContent=`Attempts: ${attempts}`;}
 function choose(b,side){
-if(b.disabled)return;
+if(b.disabled||locked)return;
+status.classList.remove('lm-error');
 if(selected[side])selected[side].setAttribute('aria-pressed','false');
 if(selected[side]===b){selected[side]=null;return;}
 selected[side]=b;b.setAttribute('aria-pressed','true');
@@ -47,10 +52,10 @@ if(!selected[0]||!selected[1])return;
 attempts++;
 const correct=selected[0].dataset.pair===selected[1].dataset.pair;
 if(correct){matched++;selected.forEach(x=>{x.disabled=true;x.textContent='✓ '+x.textContent;x.setAttribute('aria-pressed','false');});status.textContent=matched===8?'All eight matched! Restart to play again.':'Correct match!';}
-else{status.textContent='Those do not match. Try another pair.';selected.forEach(x=>x.setAttribute('aria-pressed','false'));}
+else{status.textContent='Those do not match. Try another pair.';status.classList.add('lm-error');locked=true;const wrongCards=[...selected];wrongCards.forEach(x=>{x.setAttribute('aria-pressed','false');x.classList.add('lm-wrong');});wrongTimer=setTimeout(()=>{wrongCards.forEach(x=>x.classList.remove('lm-wrong'));locked=false;wrongTimer=null;},900);}
 selected=[null,null];update();
 }
-function start(){selected=[null,null];matched=0;attempts=0;terms.replaceChildren();defs.replaceChildren();
+function start(){clearTimeout(wrongTimer);wrongTimer=null;locked=false;status.classList.remove('lm-error');selected=[null,null];matched=0;attempts=0;terms.replaceChildren();defs.replaceChildren();
 [terms,defs].forEach((container,side)=>shuffle(pairs.map((p,i)=>({label:p[side],id:i}))).forEach(item=>{const b=document.createElement('button');b.type='button';b.className='btn btn-block';b.dataset.pair=item.id;b.textContent=item.label;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>choose(b,side));container.append(b);}));status.textContent='Select a category and its matching purpose.';update();}
 root.querySelector('#lm-reset').addEventListener('click',start);start();
 })();
