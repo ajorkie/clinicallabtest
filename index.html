@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clinical Lab Matching Game</title>
+<style>*{box-sizing:border-box}body{margin:0;padding:32px 16px;background:#eef2fa;color:#17213b;font:16px/1.5 system-ui,sans-serif}main{max-width:960px;margin:auto}h2{font-size:28px;margin:0 0 8px}h3{font-size:18px}.intro{color:#495570}.viz-row{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}.btn{font:inherit;color:inherit;background:#fff;border:1px solid #bcc7dc;border-radius:12px;padding:12px 16px;cursor:pointer}.btn:hover:not(:disabled){background:#e2eaff}.btn:focus-visible{outline:3px solid #5268da;outline-offset:3px}.btn-block{display:block;width:100%;min-height:86px;text-align:left;white-space:normal;overflow-wrap:anywhere}.btn[aria-pressed="true"]{background:#3348bb;color:white;border-color:#3348bb}.btn:disabled{background:#deefdf;color:#27572f;border-color:#93ba96;cursor:default}.tabular-nums{font-variant-numeric:tabular-nums}#lm-status{min-height:48px;font-weight:600}@media(max-width:420px){body{padding:20px 10px}.btn{padding:10px}.btn-block{min-height:110px}}</style>
+</head>
+<body>
+<main>
+<p class="intro">Match each category with its purpose. Select one card from each column. All eight pairs come from the category set in your worksheet.</p>
+<div id="lab-match">
+  <h2>Clinical lab match</h2>
+  <div class="viz-row"><span id="lm-score" class="tabular-nums"></span><button class="btn" id="lm-reset" type="button">Restart</button></div>
+  <p id="lm-status" aria-live="polite">Select a category and its matching purpose.</p>
+  <div class="lm-columns"><section><h3>Categories</h3><div id="lm-terms" class="lm-stack"></div></section><section><h3>Purposes</h3><div id="lm-defs" class="lm-stack"></div></section></div>
+</div>
+<style>
+#lab-match .lm-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+#lab-match .lm-stack{display:grid;gap:8px}
+#lab-match section{min-width:0}
+@media(max-width:420px){#lab-match .lm-columns{gap:8px}}
+</style>
+<script>
+(()=>{
+const root=document.getElementById('lab-match');
+const pairs=[
+['Universal precautions','Apply to every exam, especially therapeutic procedures.'],
+['Renal function','Evaluates whether kidneys can handle CT contrast or a radiopharmaceutical.'],
+['Thyroid and parathyroid function','Evaluates hormone secretions and stimulation of these glands.'],
+['Bone and cancer evaluation','Tests related to bone development and cancer growth or metastasis.'],
+['Liver and hepatobiliary function','Evaluates liver function and whether bile drainage pathways are open.'],
+['Hematology and radiolabeled RBC procedures','Labs that help ensure safe blood-related and red blood cell labeling procedures.'],
+['Cardiac and thromboembolic evaluation','Tests useful for cardiac studies or evaluating the need for a V/Q study.'],
+['F-18 FDG PET preparation','Labs that help ensure good-quality FDG PET studies.']
+];
+const terms=root.querySelector('#lm-terms'),defs=root.querySelector('#lm-defs'),status=root.querySelector('#lm-status'),score=root.querySelector('#lm-score');
+let selected=[null,null],matched=0,attempts=0;
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function update(){score.textContent=`${matched} / 8 matched · ${attempts} attempts`;}
+function choose(b,side){
+if(b.disabled)return;
+if(selected[side])selected[side].setAttribute('aria-pressed','false');
+if(selected[side]===b){selected[side]=null;return;}
+selected[side]=b;b.setAttribute('aria-pressed','true');
+if(!selected[0]||!selected[1])return;
+attempts++;
+const correct=selected[0].dataset.pair===selected[1].dataset.pair;
+if(correct){matched++;selected.forEach(x=>{x.disabled=true;x.textContent='✓ '+x.textContent;x.setAttribute('aria-pressed','false');});status.textContent=matched===8?'All eight matched! Restart to play again.':'Correct match!';}
+else{status.textContent='Those do not match. Try another pair.';selected.forEach(x=>x.setAttribute('aria-pressed','false'));}
+selected=[null,null];update();
+}
+function start(){selected=[null,null];matched=0;attempts=0;terms.replaceChildren();defs.replaceChildren();
+[terms,defs].forEach((container,side)=>shuffle(pairs.map((p,i)=>({label:p[side],id:i}))).forEach(item=>{const b=document.createElement('button');b.type='button';b.className='btn btn-block';b.dataset.pair=item.id;b.textContent=item.label;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>choose(b,side));container.append(b);}));status.textContent='Select a category and its matching purpose.';update();}
+root.querySelector('#lm-reset').addEventListener('click',start);start();
+})();
+</script>
+
+</main>
+</body>
+</html>
